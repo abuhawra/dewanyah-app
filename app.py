@@ -1,14 +1,21 @@
 import streamlit as st
 import pandas as pd
-from supabase import create_client, Client
+import requests
 
 # --- إعدادات الصفحة ---
 st.set_page_config(page_title="حسابات الديوانية", page_icon="💰", layout="wide")
 
-# --- الاتصال بقاعدة البيانات (جلب المفاتيح من الإعدادات السرية) ---
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-supabase: Client = create_client(url, key)
+# --- الاتصال المباشر بقاعدة البيانات (REST API) ---
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+
+endpoint = f"{SUPABASE_URL}/rest/v1/transactions"
+headers = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
 
 st.title("💰 تطبيق حسابات الديوانية")
 
@@ -30,20 +37,26 @@ with st.container():
                 "amount": amount,
                 "description": desc
             }
-            response = supabase.table("transactions").insert(data).execute()
-            st.success(f"تم تسجيل {t_type} بمبلغ {amount} بنجاح!")
-            st.rerun() # لإعادة تحديث الحسابات فوراً
+            # إرسال البيانات مباشرة
+            response = requests.post(endpoint, headers=headers, json=data)
+            
+            if response.status_code in [200, 201]:
+                st.success(f"تم تسجيل {t_type} بمبلغ {amount} بنجاح!")
+                st.rerun()
+            else:
+                st.error("حدث خطأ أثناء الاتصال بقاعدة البيانات.")
         else:
             st.error("يرجى إدخال مبلغ أكبر من صفر")
 
 st.divider()
 
 # --- القسم الثاني: جلب البيانات والحسابات ---
-# جلب كل البيانات لحساب الرصيد (أو آخر 100 لعرضها)
-response = supabase.table("transactions").select("*").order("created_at", desc=True).execute()
-df = pd.DataFrame(response.data)
+# جلب أحدث العمليات
+get_response = requests.get(f"{endpoint}?select=*&order=created_at.desc", headers=headers)
 
-if not df.empty:
+if get_response.status_code == 200 and len(get_response.json()) > 0:
+    df = pd.DataFrame(get_response.json())
+    
     # حساب الرصيد الحالي
     total_income = df[df['transaction_type'] == 'واردات']['amount'].sum()
     total_expense = df[df['transaction_type'] == 'مصاريف']['amount'].sum()
@@ -51,7 +64,7 @@ if not df.empty:
     
     current_balance = (initial_balance + total_income) - total_expense
 
-    # عرض البطاقات التعريفية للرصيد
+    # عرض البطاقات
     c1, c2, c3 = st.columns(3)
     c1.metric("إجمالي الواردات", f"{total_income} د.ع")
     c2.metric("إجمالي المصاريف", f"{total_expense} د.ع", delta_color="inverse")
@@ -59,13 +72,12 @@ if not df.empty:
 
     st.divider()
 
-    # --- القسم الثالث: عرض آخر 100 عملية ---
-    st.header("📑 آخر 100 عملية")
-    # نأخذ أول 100 سطر فقط
-    recent_df = df.head(100)[['created_at', 'transaction_type', 'amount', 'description']]
+    # --- القسم الثالث: عرض العمليات ---
+    st.header("📑 آخر العمليات")
+    recent_df = df[['created_at', 'transaction_type', 'amount', 'description']].copy()
     # تحسين شكل عرض التاريخ
     recent_df['created_at'] = pd.to_datetime(recent_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
     
-    st.table(recent_df) # عرضها كجدول بسيط وواضح
+    st.table(recent_df)
 else:
     st.info("لا توجد عمليات مسجلة بعد. ابدأ بإضافة رصيد افتتاحي.")
