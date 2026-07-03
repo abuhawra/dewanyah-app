@@ -36,7 +36,6 @@ with st.container():
                 "amount": amount,
                 "description": desc
             }
-            # إرسال البيانات وحفظها
             response = requests.post(url, headers=headers, json=data)
             
             if response.status_code in [200, 201]:
@@ -70,10 +69,10 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
 
     st.divider()
 
-    # --- القسم الثالث: جدول العمليات مع زر الحذف المباشر ---
+    # --- القسم الثالث: جدول العمليات الملون ---
     st.header("📑 آخر العمليات")
     
-    # تصميم عناوين الجدول (رؤوس الأعمدة)
+    # تصميم عناوين الجدول
     h1, h2, h3, h4, h5 = st.columns([2, 1.5, 1.5, 3, 1])
     h1.write("**التاريخ**")
     h2.write("**النوع**")
@@ -83,26 +82,40 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
     
     st.markdown("---")
     
-    # المرور على كل عملية وعرضها
+    # المرور على كل عملية وعرضها بالألوان
     for index, row in df.iterrows():
         c1, c2, c3, c4, c5 = st.columns([2, 1.5, 1.5, 3, 1])
         
         dt = pd.to_datetime(row['created_at']).strftime('%Y-%m-%d %H:%M')
+        t_type_val = row['transaction_type']
+        amt_val = row['amount']
+        desc_val = row['description']
         
+        # تحديد الألوان والعلامات بناءً على نوع العملية
+        if t_type_val == "مصاريف":
+            colored_type = f":red[🔻 {t_type_val}]"
+            colored_amt = f":red[- {amt_val} ر.س]"
+        elif t_type_val == "واردات":
+            colored_type = f":green[🔼 {t_type_val}]"
+            colored_amt = f":green[+ {amt_val} ر.س]"
+        else: # رصيد افتتاحي
+            colored_type = f":blue[💠 {t_type_val}]"
+            colored_amt = f":blue[{amt_val} ر.س]"
+        
+        # طباعة البيانات في الأعمدة
         c1.write(dt)
-        c2.write(row['transaction_type'])
-        c3.write(f"{row['amount']} ر.س")
-        c4.write(row['description'])
+        c2.markdown(colored_type)
+        c3.markdown(colored_amt)
+        c4.write(desc_val)
         
-        # زر الحذف مع فحص الأخطاء
-        if c5.button("➖", key=f"del_{row['id']}", help="حذف هذه العملية"):
+        # زر الحذف
+        if c5.button("🗑️", key=f"del_{row['id']}", help="حذف هذه العملية"):
             delete_url = f"{url}?id=eq.{row['id']}"
             del_response = requests.delete(delete_url, headers=headers)
             
             if del_response.status_code in [200, 204]:
-                st.rerun() # تحديث الصفحة وإعادة الحسابات عند النجاح
+                st.rerun()
             else:
-                # إذا تم الرفض، سيظهر لك السبب هنا
                 st.error(f"فشل الحذف. سبب الرفض: {del_response.text}")
 else:
     st.info("لا توجد عمليات مسجلة بعد. ابدأ بإضافة رصيد افتتاحي.")
