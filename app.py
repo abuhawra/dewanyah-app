@@ -16,17 +16,6 @@ headers = {
     "Prefer": "return=representation"
 }
 
-# --- دالة الحذف (Callback) ---
-# هذه الدالة تعمل في الخلفية قبل إعادة تحميل الصفحة
-def delete_transaction(record_id):
-    delete_url = f"{url}?id=eq.{record_id}"
-    del_response = requests.delete(delete_url, headers=headers)
-    
-    if del_response.status_code in [200, 204]:
-        st.toast("تم حذف العملية بنجاح!", icon="🗑️")
-    else:
-        st.toast("حدث خطأ، لم يتم الحذف.", icon="❌")
-
 st.title("💰 تطبيق حسابات الديوانية")
 
 # --- القسم الأول: تسجيل عملية جديدة ---
@@ -47,13 +36,14 @@ with st.container():
                 "amount": amount,
                 "description": desc
             }
+            # إرسال البيانات وحفظها
             response = requests.post(url, headers=headers, json=data)
             
             if response.status_code in [200, 201]:
                 st.success("تم تسجيل العملية بنجاح!")
-                st.rerun()
+                st.rerun() 
             else:
-                st.error("حدث خطأ أثناء الحفظ.")
+                st.error(f"حدث خطأ أثناء الحفظ: {response.text}")
         else:
             st.error("يرجى إدخال مبلغ أكبر من صفر.")
 
@@ -80,9 +70,10 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
 
     st.divider()
 
-    # --- القسم الثالث: جدول العمليات مع زر الحذف ---
+    # --- القسم الثالث: جدول العمليات مع زر الحذف المباشر ---
     st.header("📑 آخر العمليات")
     
+    # تصميم عناوين الجدول (رؤوس الأعمدة)
     h1, h2, h3, h4, h5 = st.columns([2, 1.5, 1.5, 3, 1])
     h1.write("**التاريخ**")
     h2.write("**النوع**")
@@ -92,6 +83,7 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
     
     st.markdown("---")
     
+    # المرور على كل عملية وعرضها
     for index, row in df.iterrows():
         c1, c2, c3, c4, c5 = st.columns([2, 1.5, 1.5, 3, 1])
         
@@ -102,13 +94,15 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
         c3.write(f"{row['amount']} ر.س")
         c4.write(row['description'])
         
-        # ربط الزر بدالة الحذف مباشرة عبر on_click
-        c5.button(
-            "➖", 
-            key=f"del_{row['id']}", 
-            help="حذف هذه العملية", 
-            on_click=delete_transaction, 
-            args=(row['id'],)
-        )
+        # زر الحذف مع فحص الأخطاء
+        if c5.button("➖", key=f"del_{row['id']}", help="حذف هذه العملية"):
+            delete_url = f"{url}?id=eq.{row['id']}"
+            del_response = requests.delete(delete_url, headers=headers)
+            
+            if del_response.status_code in [200, 204]:
+                st.rerun() # تحديث الصفحة وإعادة الحسابات عند النجاح
+            else:
+                # إذا تم الرفض، سيظهر لك السبب هنا
+                st.error(f"فشل الحذف. سبب الرفض: {del_response.text}")
 else:
     st.info("لا توجد عمليات مسجلة بعد. ابدأ بإضافة رصيد افتتاحي.")
