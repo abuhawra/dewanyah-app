@@ -5,6 +5,10 @@ import requests
 # --- إعدادات الصفحة ---
 st.set_page_config(page_title="حسابات الديوانية", page_icon="💰", layout="wide")
 
+# --- تهيئة متغير لتأكيد الحذف ---
+if "confirm_delete_id" not in st.session_state:
+    st.session_state.confirm_delete_id = None
+
 # --- إعدادات الاتصال المباشر (REST API) ---
 url = "https://zttkamtuccxgkugqzhwr.supabase.co/rest/v1/transactions"
 key = st.secrets["SUPABASE_KEY"]
@@ -64,7 +68,6 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
     # --- عرض البطاقات الإحصائية بألوان مخصصة ---
     c1, c2, c3 = st.columns(3)
     
-    # بطاقة الواردات (أخضر)
     c1.markdown(f"""
     <div style="direction: rtl; text-align: right;">
         <p style="font-size: 16px; margin-bottom: 0px; font-weight: 500;">إجمالي الواردات</p>
@@ -72,7 +75,6 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
     </div>
     """, unsafe_allow_html=True)
 
-    # بطاقة المصاريف (أحمر)
     c2.markdown(f"""
     <div style="direction: rtl; text-align: right;">
         <p style="font-size: 16px; margin-bottom: 0px; font-weight: 500;">إجمالي المصاريف</p>
@@ -80,7 +82,6 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
     </div>
     """, unsafe_allow_html=True)
 
-    # بطاقة الرصيد الحالي (أزرق فاتح)
     c3.markdown(f"""
     <div style="direction: rtl; text-align: right;">
         <p style="font-size: 16px; margin-bottom: 0px; font-weight: 500;">الرصيد الحالي</p>
@@ -90,9 +91,35 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
 
     st.divider()
 
-    # --- القسم الثالث: جدول العمليات الملون ---
+    # --- القسم الثالث: جدول العمليات الملون ونظام الحذف ---
     st.header("📑 آخر العمليات")
+
+    # [جديد] رسالة تأكيد الحذف
+    if st.session_state.confirm_delete_id:
+        target_row = df[df['id'] == st.session_state.confirm_delete_id]
+        if not target_row.empty:
+            target_desc = target_row.iloc[0]['description']
+            target_amt = target_row.iloc[0]['amount']
+            
+            st.warning(f"⚠️ **تأكيد الحذف:** هل أنت متأكد أنك تريد حذف عملية ( {target_desc} ) بمبلغ {target_amt} ر.س بشكل نهائي؟")
+            
+            btn_col1, btn_col2, _ = st.columns([1, 1, 4])
+            with btn_col1:
+                if st.button("✅ نعم، احذف", type="primary"):
+                    delete_url = f"{url}?id=eq.{st.session_state.confirm_delete_id}"
+                    del_response = requests.delete(delete_url, headers=headers)
+                    if del_response.status_code in [200, 204]:
+                        st.session_state.confirm_delete_id = None
+                        st.rerun()
+                    else:
+                        st.error("فشل الحذف.")
+            with btn_col2:
+                if st.button("❌ إلغاء"):
+                    st.session_state.confirm_delete_id = None
+                    st.rerun()
+            st.markdown("---")
     
+    # تصميم عناوين الجدول
     h1, h2, h3, h4, h5 = st.columns([2, 1.5, 1.5, 3, 1])
     h1.write("**التاريخ**")
     h2.write("**النوع**")
@@ -126,14 +153,9 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
         c3.markdown(colored_amt)
         c4.write(desc_val)
         
-        # زر الحذف
-        if c5.button("🗑️", key=f"del_{row['id']}", help="حذف هذه العملية"):
-            delete_url = f"{url}?id=eq.{row['id']}"
-            del_response = requests.delete(delete_url, headers=headers)
-            
-            if del_response.status_code in [200, 204]:
-                st.rerun()
-            else:
-                st.error(f"فشل الحذف. سبب الرفض: {del_response.text}")
+        # عند الضغط على زر الحذف، نقوم بحفظ رقم العملية ونحدث الصفحة لتظهر رسالة التأكيد
+        if c5.button("🗑️", key=f"btn_{row['id']}", help="حذف هذه العملية"):
+            st.session_state.confirm_delete_id = row['id']
+            st.rerun()
 else:
     st.info("لا توجد عمليات مسجلة بعد. ابدأ بإضافة رصيد افتتاحي.")
