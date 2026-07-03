@@ -61,18 +61,38 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
     
     current_balance = (initial_balance + total_income) - total_expense
 
-    # عرض البطاقات الإحصائية
+    # --- عرض البطاقات الإحصائية بألوان مخصصة ---
     c1, c2, c3 = st.columns(3)
-    c1.metric("إجمالي الواردات", f"{total_income} ر.س")
-    c2.metric("إجمالي المصاريف", f"{total_expense} ر.س", delta_color="inverse")
-    c3.metric("الرصيد الحالي", f"{current_balance} ر.س")
+    
+    # بطاقة الواردات (أخضر)
+    c1.markdown(f"""
+    <div style="direction: rtl; text-align: right;">
+        <p style="font-size: 16px; margin-bottom: 0px; font-weight: 500;">إجمالي الواردات</p>
+        <h2 style="color: #4CAF50; margin-top: 0px; font-size: 2.5rem;">{total_income} <span style="font-size: 1.5rem;">ر.س</span></h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # بطاقة المصاريف (أحمر)
+    c2.markdown(f"""
+    <div style="direction: rtl; text-align: right;">
+        <p style="font-size: 16px; margin-bottom: 0px; font-weight: 500;">إجمالي المصاريف</p>
+        <h2 style="color: #F44336; margin-top: 0px; font-size: 2.5rem;">{total_expense} <span style="font-size: 1.5rem;">ر.س</span></h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # بطاقة الرصيد الحالي (أزرق فاتح)
+    c3.markdown(f"""
+    <div style="direction: rtl; text-align: right;">
+        <p style="font-size: 16px; margin-bottom: 0px; font-weight: 500;">الرصيد الحالي</p>
+        <h2 style="color: #03A9F4; margin-top: 0px; font-size: 2.5rem;">{current_balance} <span style="font-size: 1.5rem;">ر.س</span></h2>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.divider()
 
     # --- القسم الثالث: جدول العمليات الملون ---
     st.header("📑 آخر العمليات")
     
-    # تصميم عناوين الجدول
     h1, h2, h3, h4, h5 = st.columns([2, 1.5, 1.5, 3, 1])
     h1.write("**التاريخ**")
     h2.write("**النوع**")
@@ -91,18 +111,16 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
         amt_val = row['amount']
         desc_val = row['description']
         
-        # تحديد الألوان والعلامات بناءً على نوع العملية
         if t_type_val == "مصاريف":
             colored_type = f":red[🔻 {t_type_val}]"
             colored_amt = f":red[- {amt_val} ر.س]"
         elif t_type_val == "واردات":
             colored_type = f":green[🔼 {t_type_val}]"
             colored_amt = f":green[+ {amt_val} ر.س]"
-        else: # رصيد افتتاحي
+        else:
             colored_type = f":blue[💠 {t_type_val}]"
             colored_amt = f":blue[{amt_val} ر.س]"
         
-        # طباعة البيانات في الأعمدة
         c1.write(dt)
         c2.markdown(colored_type)
         c3.markdown(colored_amt)
