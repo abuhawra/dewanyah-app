@@ -22,7 +22,58 @@ headers = {
 
 st.title("💰 تطبيق حسابات الديوانية")
 
-# --- القسم الأول: تسجيل عملية جديدة ---
+# ==========================================
+# 1. جلب البيانات وحساب الأرصدة أولاً
+# ==========================================
+get_response = requests.get(f"{url}?select=*&order=created_at.desc", headers=headers)
+
+df = pd.DataFrame()
+total_income = 0.0
+total_expense = 0.0
+initial_balance = 0.0
+
+if get_response.status_code == 200 and len(get_response.json()) > 0:
+    df = pd.DataFrame(get_response.json())
+    total_income = df[df['transaction_type'] == 'واردات']['amount'].sum()
+    total_expense = df[df['transaction_type'] == 'مصاريف']['amount'].sum()
+    initial_balance = df[df['transaction_type'] == 'رصيد افتتاحي']['amount'].sum()
+
+current_balance = (initial_balance + total_income) - total_expense
+
+# ==========================================
+# 2. عرض البطاقات الإحصائية (في الأعلى)
+# ==========================================
+c1, c2, c3 = st.columns(3)
+
+# بطاقة الواردات (خلفية خضراء فاتحة)
+c1.markdown(f"""
+<div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي الواردات</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{total_income} <span style="font-size: 1.5rem;">ر.س</span></h2>
+</div>
+""", unsafe_allow_html=True)
+
+# بطاقة المصاريف (خلفية حمراء فاتحة)
+c2.markdown(f"""
+<div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي المصاريف</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{total_expense} <span style="font-size: 1.5rem;">ر.س</span></h2>
+</div>
+""", unsafe_allow_html=True)
+
+# بطاقة الرصيد الحالي (خلفية زرقاء فاتحة)
+c3.markdown(f"""
+<div style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">الرصيد الحالي</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{current_balance} <span style="font-size: 1.5rem;">ر.س</span></h2>
+</div>
+""", unsafe_allow_html=True)
+
+st.divider()
+
+# ==========================================
+# 3. تسجيل عملية جديدة (في المنتصف)
+# ==========================================
 st.header("➕ تسجيل عملية جديدة")
 with st.container():
     col1, col2, col3 = st.columns(3)
@@ -52,51 +103,12 @@ with st.container():
 
 st.divider()
 
-# --- القسم الثاني: جلب وعرض البيانات ---
-get_response = requests.get(f"{url}?select=*&order=created_at.desc", headers=headers)
+# ==========================================
+# 4. جدول العمليات ونظام الحذف (في الأسفل)
+# ==========================================
+st.header("📑 آخر العمليات")
 
-if get_response.status_code == 200 and len(get_response.json()) > 0:
-    df = pd.DataFrame(get_response.json())
-    
-    # حساب الأرصدة
-    total_income = df[df['transaction_type'] == 'واردات']['amount'].sum()
-    total_expense = df[df['transaction_type'] == 'مصاريف']['amount'].sum()
-    initial_balance = df[df['transaction_type'] == 'رصيد افتتاحي']['amount'].sum()
-    
-    current_balance = (initial_balance + total_income) - total_expense
-
-    # --- عرض البطاقات الإحصائية مع خلفيات ملونة ونص أسود ---
-    c1, c2, c3 = st.columns(3)
-    
-    # بطاقة الواردات (خلفية خضراء فاتحة، نص أسود)
-    c1.markdown(f"""
-    <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-        <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي الواردات</p>
-        <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{total_income} <span style="font-size: 1.5rem;">ر.س</span></h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # بطاقة المصاريف (خلفية حمراء فاتحة، نص أسود)
-    c2.markdown(f"""
-    <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-        <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي المصاريف</p>
-        <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{total_expense} <span style="font-size: 1.5rem;">ر.س</span></h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # بطاقة الرصيد الحالي (خلفية زرقاء فاتحة، نص أسود)
-    c3.markdown(f"""
-    <div style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-        <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">الرصيد الحالي</p>
-        <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{current_balance} <span style="font-size: 1.5rem;">ر.س</span></h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.divider()
-
-    # --- القسم الثالث: جدول العمليات الملون ونظام الحذف ---
-    st.header("📑 آخر العمليات")
-
+if not df.empty:
     # رسالة تأكيد الحذف
     if st.session_state.confirm_delete_id:
         target_row = df[df['id'] == st.session_state.confirm_delete_id]
