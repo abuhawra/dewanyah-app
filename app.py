@@ -36,11 +36,12 @@ with st.container():
                 "amount": amount,
                 "description": desc
             }
+            # إرسال البيانات وحفظها
             response = requests.post(url, headers=headers, json=data)
             
             if response.status_code in [200, 201]:
                 st.success("تم تسجيل العملية بنجاح!")
-                st.rerun()
+                st.rerun() # تحديث الصفحة فوراً لإعادة الحسابات
             else:
                 st.error("حدث خطأ أثناء الحفظ.")
         else:
@@ -61,7 +62,7 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
     
     current_balance = (initial_balance + total_income) - total_expense
 
-    # عرض البطاقات الإحصائية بالريال السعودي
+    # عرض البطاقات الإحصائية
     c1, c2, c3 = st.columns(3)
     c1.metric("إجمالي الواردات", f"{total_income} ر.س")
     c2.metric("إجمالي المصاريف", f"{total_expense} ر.س", delta_color="inverse")
@@ -69,51 +70,39 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
 
     st.divider()
 
-    # --- القسم الثالث: جدول العمليات السابقة ---
+    # --- القسم الثالث: جدول العمليات مع زر الحذف المباشر ---
     st.header("📑 آخر العمليات")
     
-    # تجهيز نسخة من البيانات للعرض بشكل أنيق
-    display_df = df[['id', 'created_at', 'transaction_type', 'amount', 'description']].copy()
-    display_df['created_at'] = pd.to_datetime(display_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
+    # تصميم عناوين الجدول (رؤوس الأعمدة)
+    h1, h2, h3, h4, h5 = st.columns([2, 1.5, 1.5, 3, 1])
+    h1.write("**التاريخ**")
+    h2.write("**النوع**")
+    h3.write("**المبلغ**")
+    h4.write("**البيان**")
+    h5.write("**إجراء**")
     
-    # تغيير أسماء الأعمدة للغة العربية
-    display_df = display_df.rename(columns={
-        'id': 'رقم العملية', 
-        'created_at': 'التاريخ', 
-        'transaction_type': 'النوع', 
-        'amount': 'المبلغ (ر.س)', 
-        'description': 'البيان'
-    })
+    st.markdown("---")
     
-    # عرض الجدول باستخدام dataframe لإخفاء الفهرس (Index) وجعله أجمل
-    st.dataframe(display_df, hide_index=True, use_container_width=True)
-
-    st.divider()
-
-    # --- القسم الرابع: حذف عملية ---
-    st.header("🗑️ حذف عملية مسبقة")
-    with st.expander("اضغط هنا لفتح خيارات الحذف", expanded=False):
-        # تصميم دالة بسيطة لعرض تفاصيل العملية في القائمة المنسدلة بوضوح
-        def format_transaction(trans_id):
-            row = df[df['id'] == trans_id].iloc[0]
-            return f"رقم {trans_id} | {row['transaction_type']} | {row['amount']} ر.س | {row['description']}"
-
-        selected_id = st.selectbox(
-            "اختر العملية التي تريد حذفها بشكل نهائي:",
-            options=df['id'].tolist(),
-            format_func=format_transaction
-        )
-
-        if st.button("حذف العملية المحددة", type="primary"):
-            # إرسال طلب الحذف (DELETE) إلى Supabase بناءً على رقم الـ ID
-            delete_url = f"{url}?id=eq.{selected_id}"
+    # المرور على كل عملية وعرضها في صف مستقل مع زر الحذف
+    for index, row in df.iterrows():
+        c1, c2, c3, c4, c5 = st.columns([2, 1.5, 1.5, 3, 1])
+        
+        # تنسيق التاريخ
+        dt = pd.to_datetime(row['created_at']).strftime('%Y-%m-%d %H:%M')
+        
+        c1.write(dt)
+        c2.write(row['transaction_type'])
+        c3.write(f"{row['amount']} ر.س")
+        c4.write(row['description'])
+        
+        # زر الحذف في نهاية كل سطر
+        if c5.button("➖", key=f"del_{row['id']}", help="حذف هذه العملية"):
+            delete_url = f"{url}?id=eq.{row['id']}"
             del_response = requests.delete(delete_url, headers=headers)
             
             if del_response.status_code in [200, 204]:
-                st.success("تم الحذف بنجاح! جاري تحديث الأرصدة...")
-                st.rerun()
+                st.rerun() # تحديث الصفحة فوراً بعد الحذف لإعادة الحسابات
             else:
-                st.error("حدث خطأ، لم يتم الحذف.")
-
+                st.error("حدث خطأ أثناء محاولة الحذف.")
 else:
     st.info("لا توجد عمليات مسجلة بعد. ابدأ بإضافة رصيد افتتاحي.")
