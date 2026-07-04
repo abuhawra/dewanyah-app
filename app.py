@@ -4,7 +4,7 @@ import requests
 import datetime
 
 # --- إعدادات الصفحة ---
-st.set_page_config(page_title="حسابات الديوانية", page_icon="💰", layout="wide")
+st.set_page_config(page_title="الميزانية الشهرية", page_icon="💰", layout="wide")
 
 # --- تهيئة متغير لتأكيد الحذف ---
 if "confirm_delete_id" not in st.session_state:
@@ -21,7 +21,7 @@ headers = {
     "Prefer": "return=representation"
 }
 
-st.title("💰 تطبيق حسابات الديوانية")
+st.title("💰 الميزانية الشهرية")
 
 # ==========================================
 # 1. جلب البيانات وحساب الأرصدة
@@ -63,7 +63,7 @@ safe_days = max(1, days_remaining)
 daily_allowance = round(current_balance / safe_days, 2)
 
 # ==========================================
-# 2. عرض البطاقات الإحصائية (5 أعمدة الآن)
+# 2. عرض البطاقات الإحصائية (5 أعمدة)
 # ==========================================
 c1, c2, c3, c4, c5 = st.columns(5)
 
