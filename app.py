@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import datetime
-import time  # <-- أضفنا مكتبة الوقت هنا
+import time 
 
 # --- إعدادات الصفحة ---
 st.set_page_config(page_title="الميزانية الشهرية", page_icon="💰", layout="wide")
@@ -22,7 +22,14 @@ headers = {
     "Prefer": "return=representation"
 }
 
-st.title("💰 الميزانية الشهرية")
+# --- العنوان وزر التحديث ---
+col_title, col_btn = st.columns([8, 2])
+with col_title:
+    st.title("💰 الميزانية الشهرية")
+with col_btn:
+    st.write("") # مسافة فارغة لضبط المحاذاة
+    if st.button("🔄 تحديث البيانات", use_container_width=True):
+        st.rerun()
 
 # ==========================================
 # 1. جلب البيانات وحساب الأرصدة
@@ -128,7 +135,6 @@ with st.container():
             response = requests.post(url, headers=headers, json=data)
             
             if response.status_code in [200, 201]:
-                # التعديل هنا: إظهار الرسالة ثم الانتظار ثانية واحدة قبل التحديث
                 st.success("تم الحفظ بنجاح! ✅")
                 time.sleep(1) 
                 st.rerun() 
