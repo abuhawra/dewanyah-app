@@ -27,8 +27,10 @@ col_title, col_btn = st.columns([8, 2])
 with col_title:
     st.title("💰 الميزانية الشهرية")
 with col_btn:
-    st.write("") # مسافة فارغة لضبط المحاذاة
+    st.write("") 
     if st.button("🔄 تحديث البيانات", use_container_width=True):
+        st.toast("جاري تحديث البيانات والوقت...", icon="⏳")
+        time.sleep(1)
         st.rerun()
 
 # ==========================================
@@ -50,9 +52,10 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
 current_balance = (initial_balance + total_income) - total_expense
 
 # ==========================================
-# حساب الأيام المتبقية للراتب (يوم 27) والمصروف اليومي
+# حساب الأيام المتبقية للراتب بناءً على التوقيت المحلي (السعودية UTC+3)
 # ==========================================
-today = datetime.date.today()
+ksa_tz = datetime.timezone(datetime.timedelta(hours=3))
+today = datetime.datetime.now(ksa_tz).date()
 
 if today.day < 27:
     next_salary_date = datetime.date(today.year, today.month, 27)
@@ -113,7 +116,7 @@ c5.markdown(f"""
 st.divider()
 
 # ==========================================
-# 3. تسجيل عملية جديدة (في المنتصف)
+# 3. تسجيل عملية جديدة
 # ==========================================
 st.header("➕ تسجيل عملية جديدة")
 with st.container():
@@ -146,7 +149,7 @@ with st.container():
 st.divider()
 
 # ==========================================
-# 4. جدول العمليات ونظام الحذف (في الأسفل)
+# 4. جدول العمليات ونظام الحذف
 # ==========================================
 st.header("📑 آخر العمليات")
 
@@ -187,7 +190,11 @@ if not df.empty:
     for index, row in df.iterrows():
         c1, c2, c3, c4, c5 = st.columns([2, 1.5, 1.5, 3, 1])
         
-        dt = pd.to_datetime(row['created_at']).strftime('%Y-%m-%d %H:%M')
+        # تحويل التاريخ المعروض في الجدول لتوقيت السعودية أيضاً ليكون دقيقاً
+        utc_dt = pd.to_datetime(row['created_at'])
+        local_dt = utc_dt + pd.Timedelta(hours=3)
+        dt = local_dt.strftime('%Y-%m-%d %H:%M')
+        
         t_type_val = row['transaction_type']
         amt_val = row['amount']
         desc_val = row['description']
