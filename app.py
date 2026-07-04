@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import datetime
 
 # --- إعدادات الصفحة ---
 st.set_page_config(page_title="حسابات الديوانية", page_icon="💰", layout="wide")
@@ -23,7 +24,7 @@ headers = {
 st.title("💰 تطبيق حسابات الديوانية")
 
 # ==========================================
-# 1. جلب البيانات وحساب الأرصدة أولاً
+# 1. جلب البيانات وحساب الأرصدة
 # ==========================================
 get_response = requests.get(f"{url}?select=*&order=created_at.desc", headers=headers)
 
@@ -41,15 +42,32 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
 current_balance = (initial_balance + total_income) - total_expense
 
 # ==========================================
-# 2. عرض البطاقات الإحصائية (في الأعلى)
+# حساب الأيام المتبقية للراتب (يوم 27)
 # ==========================================
-c1, c2, c3 = st.columns(3)
+today = datetime.date.today()
+
+if today.day < 27:
+    next_salary_date = datetime.date(today.year, today.month, 27)
+elif today.day == 27:
+    next_salary_date = today
+else:
+    if today.month == 12:
+        next_salary_date = datetime.date(today.year + 1, 1, 27)
+    else:
+        next_salary_date = datetime.date(today.year, today.month + 1, 27)
+
+days_remaining = (next_salary_date - today).days
+
+# ==========================================
+# 2. عرض البطاقات الإحصائية (4 أعمدة الآن)
+# ==========================================
+c1, c2, c3, c4 = st.columns(4)
 
 # بطاقة الواردات (خلفية خضراء فاتحة)
 c1.markdown(f"""
 <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي الواردات</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{total_income} <span style="font-size: 1.5rem;">ر.س</span></h2>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.2rem;">{total_income} <span style="font-size: 1.2rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
@@ -57,7 +75,7 @@ c1.markdown(f"""
 c2.markdown(f"""
 <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي المصاريف</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{total_expense} <span style="font-size: 1.5rem;">ر.س</span></h2>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.2rem;">{total_expense} <span style="font-size: 1.2rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
@@ -65,7 +83,15 @@ c2.markdown(f"""
 c3.markdown(f"""
 <div style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">الرصيد الحالي</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.5rem;">{current_balance} <span style="font-size: 1.5rem;">ر.س</span></h2>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.2rem;">{current_balance} <span style="font-size: 1.2rem;">ر.س</span></h2>
+</div>
+""", unsafe_allow_html=True)
+
+# بطاقة المتبقي على الراتب (خلفية صفراء فاتحة)
+c4.markdown(f"""
+<div style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">المتبقي على الراتب</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.2rem;">{days_remaining} <span style="font-size: 1.2rem;">يوم</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
