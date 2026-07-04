@@ -42,7 +42,7 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
 current_balance = (initial_balance + total_income) - total_expense
 
 # ==========================================
-# حساب الأيام المتبقية للراتب (يوم 27)
+# حساب الأيام المتبقية للراتب (يوم 27) والمصروف اليومي
 # ==========================================
 today = datetime.date.today()
 
@@ -58,40 +58,52 @@ else:
 
 days_remaining = (next_salary_date - today).days
 
+# حماية من القسمة على صفر (إذا كان اليوم هو يوم الراتب نعامله كأنه يوم واحد)
+safe_days = max(1, days_remaining)
+daily_allowance = round(current_balance / safe_days, 2)
+
 # ==========================================
-# 2. عرض البطاقات الإحصائية (4 أعمدة الآن)
+# 2. عرض البطاقات الإحصائية (5 أعمدة الآن)
 # ==========================================
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5)
 
 # بطاقة الواردات (خلفية خضراء فاتحة)
 c1.markdown(f"""
-<div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي الواردات</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.2rem;">{total_income} <span style="font-size: 1.2rem;">ر.س</span></h2>
+<div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي الواردات</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{total_income} <span style="font-size: 1rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
 # بطاقة المصاريف (خلفية حمراء فاتحة)
 c2.markdown(f"""
-<div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي المصاريف</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.2rem;">{total_expense} <span style="font-size: 1.2rem;">ر.س</span></h2>
+<div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي المصاريف</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{total_expense} <span style="font-size: 1rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
 # بطاقة الرصيد الحالي (خلفية زرقاء فاتحة)
 c3.markdown(f"""
-<div style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">الرصيد الحالي</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.2rem;">{current_balance} <span style="font-size: 1.2rem;">ر.س</span></h2>
+<div style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">الرصيد الحالي</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{current_balance} <span style="font-size: 1rem;">ر.س</span></h2>
+</div>
+""", unsafe_allow_html=True)
+
+# بطاقة المصروف اليومي (خلفية بنفسجية فاتحة)
+c4.markdown(f"""
+<div style="background-color: #f3e5f5; border: 1px solid #e1bee7; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">المصروف اليومي</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{daily_allowance} <span style="font-size: 1rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
 # بطاقة المتبقي على الراتب (خلفية صفراء فاتحة)
-c4.markdown(f"""
-<div style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 20px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 16px; margin-bottom: 0px; font-weight: bold; color: black;">المتبقي على الراتب</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 2.2rem;">{days_remaining} <span style="font-size: 1.2rem;">يوم</span></h2>
+c5.markdown(f"""
+<div style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">المتبقي للراتب</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{days_remaining} <span style="font-size: 1rem;">يوم</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
