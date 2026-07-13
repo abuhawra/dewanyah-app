@@ -34,7 +34,7 @@ with col_btn:
         st.rerun()
 
 # ==========================================
-# 1. جلب البيانات وحساب الأرصدة
+# 1. جلب البيانات وحساب الأرصدة الأساسية
 # ==========================================
 get_response = requests.get(f"{url}?select=*&order=created_at.desc", headers=headers)
 
@@ -52,11 +52,13 @@ if get_response.status_code == 200 and len(get_response.json()) > 0:
 current_balance = (initial_balance + total_income) - total_expense
 
 # ==========================================
-# حساب الأيام المتبقية للراتب بناءً على التوقيت المحلي (السعودية UTC+3)
+# حساب الأيام، المصروف اليومي، ومصاريف اليوم فقط
 # ==========================================
+# تحديد تاريخ اليوم بتوقيت السعودية
 ksa_tz = datetime.timezone(datetime.timedelta(hours=3))
 today = datetime.datetime.now(ksa_tz).date()
 
+# حساب الأيام المتبقية للراتب
 if today.day < 27:
     next_salary_date = datetime.date(today.year, today.month, 27)
 elif today.day == 27:
@@ -73,43 +75,59 @@ days_remaining = (next_salary_date - today).days
 safe_days = max(1, days_remaining)
 daily_allowance = round(current_balance / safe_days, 2)
 
+# حساب مصاريف اليوم اللذي نحن فيه فقط
+today_expenses = 0.0
+if not df.empty:
+    # تحويل وقت إنشاء العمليات إلى توقيت السعودية ثم استخراج التاريخ فقط
+    df['local_date'] = pd.to_datetime(df['created_at'], utc=True).dt.tz_convert('Asia/Riyadh').dt.date
+    # جمع المبالغ التي نوعها مصاريف وتاريخها يطابق تاريخ اليوم
+    today_expenses = df[(df['transaction_type'] == 'مصاريف') & (df['local_date'] == today)]['amount'].sum()
+
 # ==========================================
-# 2. عرض البطاقات الإحصائية (5 أعمدة)
+# 2. عرض البطاقات الإحصائية (6 أعمدة)
 # ==========================================
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 
 c1.markdown(f"""
 <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي الواردات</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{total_income} <span style="font-size: 1rem;">ر.س</span></h2>
+    <p style="font-size: 13px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي الواردات</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.6rem;">{total_income} <span style="font-size: 0.9rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
 c2.markdown(f"""
 <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي المصاريف</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{total_expense} <span style="font-size: 1rem;">ر.س</span></h2>
+    <p style="font-size: 13px; margin-bottom: 0px; font-weight: bold; color: black;">إجمالي المصاريف</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.6rem;">{total_expense} <span style="font-size: 0.9rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
 c3.markdown(f"""
 <div style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">الرصيد الحالي</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{current_balance} <span style="font-size: 1rem;">ر.س</span></h2>
+    <p style="font-size: 13px; margin-bottom: 0px; font-weight: bold; color: black;">الرصيد الحالي</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.6rem;">{current_balance} <span style="font-size: 0.9rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
 c4.markdown(f"""
 <div style="background-color: #f3e5f5; border: 1px solid #e1bee7; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">المصروف اليومي</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{daily_allowance} <span style="font-size: 1rem;">ر.س</span></h2>
+    <p style="font-size: 13px; margin-bottom: 0px; font-weight: bold; color: black;">المصروف اليومي</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.6rem;">{daily_allowance} <span style="font-size: 0.9rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
 c5.markdown(f"""
 <div style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <p style="font-size: 14px; margin-bottom: 0px; font-weight: bold; color: black;">المتبقي للراتب</p>
-    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.8rem;">{days_remaining} <span style="font-size: 1rem;">يوم</span></h2>
+    <p style="font-size: 13px; margin-bottom: 0px; font-weight: bold; color: black;">المتبقي للراتب</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.6rem;">{days_remaining} <span style="font-size: 0.9rem;">يوم</span></h2>
+</div>
+""", unsafe_allow_html=True)
+
+# بطاقة مصاريف اليوم (خلفية برتقالية فاتحة)
+c6.markdown(f"""
+<div style="background-color: #ffe5d0; border: 1px solid #ffcc99; padding: 15px; border-radius: 10px; direction: rtl; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <p style="font-size: 13px; margin-bottom: 0px; font-weight: bold; color: black;">مصاريف اليوم</p>
+    <h2 style="color: black; margin-top: 5px; margin-bottom: 0px; font-size: 1.6rem;">{today_expenses} <span style="font-size: 0.9rem;">ر.س</span></h2>
 </div>
 """, unsafe_allow_html=True)
 
@@ -190,7 +208,6 @@ if not df.empty:
     for index, row in df.iterrows():
         c1, c2, c3, c4, c5 = st.columns([2, 1.5, 1.5, 3, 1])
         
-        # تحويل التاريخ المعروض في الجدول لتوقيت السعودية أيضاً ليكون دقيقاً
         utc_dt = pd.to_datetime(row['created_at'])
         local_dt = utc_dt + pd.Timedelta(hours=3)
         dt = local_dt.strftime('%Y-%m-%d %H:%M')
